@@ -84,3 +84,5 @@ export class SudokuHint {
     return null;
   }
 }
+
+export default SudokuHint;

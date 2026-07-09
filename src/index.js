@@ -1,10 +1,10 @@
 // src/index.js
-import SudokuGrid from './sudoku-grid.js';
-import SudokuSolver from './sudoku-solver.js';
-import SudokuGenerator from './sudoku-generator.js';
-import SudokuHint from './sudoku-hint.js';
-import SudokuProgress from './sudoku-progress.js';
-import SudokuUI from './sudoku-ui.js';
+import { SudokuGrid } from './sudoku-grid.js';
+import { SudokuSolver } from './sudoku-solver.js';
+import { SudokuGenerator } from './sudoku-generator.js';
+import { SudokuHint } from './sudoku-hint.js';
+import { SudokuProgress } from './sudoku-progress.js';
+import { SudokuUI } from './sudoku-ui.js';
 
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {

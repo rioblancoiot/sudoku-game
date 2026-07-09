@@ -1,9 +1,9 @@
 // src/sudoku-ui.js
-import SudokuGrid from './sudoku-grid.js';
-import SudokuSolver from './sudoku-solver.js';
-import SudokuGenerator from './sudoku-generator.js';
-import SudokuHint from './sudoku-hint.js';
-import SudokuProgress from './sudoku-progress.js';
+import { SudokuGrid } from './sudoku-grid.js';
+import { SudokuSolver } from './sudoku-solver.js';
+import { SudokuGenerator } from './sudoku-generator.js';
+import { SudokuHint } from './sudoku-hint.js';
+import { SudokuProgress } from './sudoku-progress.js';
 
 export class SudokuUI {
   constructor() {
@@ -174,10 +174,6 @@ export class SudokuUI {
   }
 
   /**
-   * Handle cell click (already handled by selectCell via event listener)
-   */
-
-  /**
    * Handle keyboard input
    * @param {KeyboardEvent} e
    */
@@ -278,139 +274,135 @@ export class SudokuUI {
   async handleHighlightConflicts() {
     this.highlightConflictsEnabled = !this.highlightConflictsEnabled;
     this.progress.recordHint('conflicts');
-    this.render(); // re-render to show/hide conflict highlighting
+    this.render();
   }
 
   async handleRevealCell() {
     if (this.selectedCell === null) return;
-    const value = this.hint.revealCell(this.selectedCell);
-    if (value !== null) {
-      this.grid.setValue(this.selectedCell, value);
-      this.progress.recordHint('reveals');
+    const value = this.grid.getValue(this.selectedCell);
+    if (value !== 0) return; // already filled
+
+    // Reveal the solution value from the generator's solution? We don't have it stored.
+    // Instead, we can use the solver to get the solution for the current puzzle.
+    // But we don't have the solver's solution stored. We'll change the design: the generator returns solution.
+    // We'll store the solution in the progress object? Actually, the progress object has the solution from the generator.
+    // We'll change the progress to store the solution and make it accessible.
+    // For now, we'll do a quick fix: we'll solve the puzzle using the solver to get the solution.
+    // However, we already have the solution in the generator's generatePuzzle result, but we didn't store it.
+    // Let's change the startNewGame to store the solution in the progress object and then use it here.
+    // We'll do that by modifying the progress object to have a solution property and a getter.
+    // But to keep changes minimal, we'll adjust the progress class to store the solution and provide a method to get it.
+    // However, we are in the middle of the UI. Let's instead change the hint class to have access to the solution?
+    // Actually, the hint class already has access to the solver, which can solve the puzzle.
+    // We'll use the hint's revealCell method, which already uses the solver to get the solution.
+    // So we can call this.hint.revealCell(this.selectedCell);
+    const success = this.hint.revealCell(this.selectedCell);
+    if (success) {
+      this.progress.recordHint('reveal');
       this.render();
       this.checkForCompletion();
     }
   }
 
   async handleLogicalHint() {
-    const hint = this.hint.getLogicalHint();
+    if (this.selectedCell === null) return;
+    const hint = this.hint.getLogicalHint(this.selectedCell);
     if (hint) {
-      // Show hint in dialog
-      const hintContent = document.getElementById('hint-content');
-      hintContent.innerHTML = `
-        <strong>${hint.technique}</strong><br>
-        ${hint.explanation}
-      `;
-      const hintDialog = document.getElementById('hint-dialog');
-      hintDialog.showModal();
+      // Show the hint in a dialog or toast
+      alert(`Hint: ${hint}`);
       this.progress.recordHint('logical');
     } else {
-      alert('No logical hint available at this time.');
+      alert('No logical hint available for this cell at the moment.');
     }
   }
 
   /**
-   * Handle game control buttons
-   */
-  handleNewGame() {
-    this.startNewGame();
-  }
-
-  handleRestart() {
-    this.progress.restartPuzzle();
-    // Reset the grid to the original puzzle
-    const combined = this.progress.getCurrentState().grid.clues.map((clue, i) => {
-      if (clue !== 0) return clue;
-      const user = this.progress.getCurrentState().grid.userEntries[i];
-      const hint = this.progress.getCurrentState().grid.hints[i];
-      if (user !== 0) return user;
-      if (hint !== 0) return hint;
-      return 0;
-    });
-    this.grid.loadPuzzle(combined);
-    this.selectedCell = null;
-    this.updateHintButtonStates();
-    this.render();
-  }
-
-  /**
-   * Check if the puzzle is complete and show game over dialog
+   * Check if the puzzle is completed and show a dialog
    */
   checkForCompletion() {
     if (this.grid.isComplete()) {
-      this.progress.completeGame();
-      this.showGameOverDialog();
+      this.progress.pauseTimer();
+      setTimeout(() => {
+        const timeTaken = this.progress.getElapsedMs();
+        const moves = this.progress.moveCount;
+        const hintsUsed = this.progress.hintsUsed;
+        alert(`Congratulations! You solved the puzzle in ${this.formatTime(timeTaken)} with ${moves} moves and ${hintsUsed} hints.`);
+        // Optionally, start a new game automatically
+        // this.startNewGame();
+      }, 300);
     }
   }
 
   /**
-   * Show the game over dialog
+   * Format milliseconds to mm:ss
+   * @param {number} ms
+   * @returns {string}
    */
-  showGameOverDialog() {
-    const state = this.progress.getCurrentState();
-    const timeString = this.progress.formatTime(state.timer.elapsedMs);
-    const moveCount = state.moveCount;
-    const hintCounts = state.hints;
-
-    const content = document.getElementById('game-over-content');
-    content.innerHTML = `
-      <p>¡Felicitaciones! Has resuelto el Sudoku.</p>
-      <p>Tiempo: ${timeString}</p>
-      <p>Movimientos: ${moveCount}</p>
-      <p>Pistas usadas: Conflictos: ${hintCounts.conflicts}, Revelar: ${hintCounts.reveals}, Lógica: ${hintCounts.logical}</p>
-    `;
-    const dialog = document.getElementById('game-over-dialog');
-    dialog.showModal();
+  formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
 
   /**
-   * Bind all event listeners
+   * Bind event listeners
    */
   bindEvents() {
-    // Grid cell clicks are handled by the selectCell method via the click listener in render
-    // We need to add the listener to each cell after rendering, but we can also use event delegation.
-    // We'll use event delegation on the grid container.
-    const gridContainer = document.getElementById('sudoku-grid');
-    gridContainer.addEventListener('click', (e) => {
-      const cell = e.target.closest('.cell');
-      if (cell) {
-        const index = parseInt(cell.dataset.index);
-        this.selectCell(index);
-      }
-    });
-
     // Keyboard input
     document.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
+    // New game button
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (newGameBtn) {
+      newGameBtn.addEventListener('click', () => this.startNewGame());
+    }
+
+    // Restart button
+    const restartBtn = document.getElementById('restart-btn');
+    if (restartBtn) {
+      restartBtn.addEventListener('click', () => {
+        this.grid.reset();
+        this.progress.resetMoves();
+        this.selectedCell = null;
+        this.highlightConflictsEnabled = false;
+        this.updateHintButtonStates();
+        this.render();
+      });
+    }
+
+    // Difficulty change
+    const difficultySelect = document.getElementById('difficulty-select');
+    if (difficultySelect) {
+      difficultySelect.addEventListener('change', () => {
+        // If a game is in progress, ask to start a new game with the new difficulty?
+        // For simplicity, we'll just start a new game when difficulty changes.
+        this.startNewGame();
+      });
+    }
+
     // Hint buttons
-    document.getElementById('highlight-conflicts-btn').addEventListener('click', () => this.handleHighlightConflicts());
-    document.getElementById('reveal-cell-btn').addEventListener('click', () => this.handleRevealCell());
-    document.getElementById('logical-hint-btn').addEventListener('click', () => this.handleLogicalHint());
+    const highlightBtn = document.getElementById('highlight-conflicts-btn');
+    if (highlightBtn) {
+      highlightBtn.addEventListener('click', () => this.handleHighlightConflicts());
+    }
 
-    // Game control buttons
-    document.getElementById('new-game-btn').addEventListener('click', () => this.handleNewGame());
-    document.getElementById('restart-btn').addEventListener('click', () => this.handleRestart());
-    document.getElementById('play-again-btn').addEventListener('click', () => {
-      document.getElementById('game-over-dialog').close();
-      this.startNewGame();
-    });
-    document.getElementById('new-game-btn-dialog').addEventListener('click', () => {
-      document.getElementById('game-over-dialog').close();
-      this.startNewGame();
-    });
-    document.getElementById('hint-close-btn').addEventListener('click', () => {
-      document.getElementById('hint-dialog').close();
-    });
+    const revealBtn = document.getElementById('reveal-cell-btn');
+    if (revealBtn) {
+      revealBtn.addEventListener('click', () => this.handleRevealCell());
+    }
 
-    // Difficulty selector change (optional: we could start a new game when changed, but we'll just let it affect next new game)
-    // We'll do nothing here.
+    const logicalBtn = document.getElementById('logical-hint-btn');
+    if (logicalBtn) {
+      logicalBtn.addEventListener('click', () => this.handleLogicalHint());
+    }
 
-    // Visibility change (tab focus/blur)
+    // Handle visibility change to pause/resume timer when tab is hidden/shown
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        this.progress.onVisibilityChange(true);
+        this.progress.pauseTimer();
       } else {
-        this.progress.onVisibilityChange(false);
+        this.progress.resumeTimer();
       }
     });
   }
