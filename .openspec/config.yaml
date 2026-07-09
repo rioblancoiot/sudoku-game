@@ -1,0 +1,37 @@
+context: |
+  Reasoning Game Project - a reasoning game project to be defined via SDD process.
+  No existing stack detected - greenfield project.
+
+strict_tdd: false
+
+testing_capabilities:
+  test_runner:
+    command: "npm test"
+    framework: "vitest"
+  test_layers:
+    unit: true
+    integration: false
+    e2e: false
+  coverage:
+    available: true
+    command: "npm run coverage"
+  quality_tools:
+    linter: true
+    type_checker: true
+    formatter: true
+
+phase_rules:
+  proposal:
+    required: true
+  spec:
+    required: true
+  design:
+    required: true
+  tasks:
+    required: true
+  apply:
+    required: true
+  verify:
+    required: true
+  archive:
+    required: true
