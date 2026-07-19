@@ -174,6 +174,27 @@ export class SudokuUI {
   }
 
   /**
+   * Enter a number into the currently selected cell (used by keypad and keyboard)
+   * @param {number} num - 1-9 to enter, 0 to clear
+   */
+  enterNumber(num) {
+    if (this.selectedCell === null) return;
+
+    let success;
+    if (num === 0) {
+      success = this.grid.clear(this.selectedCell);
+    } else {
+      success = this.grid.setValue(this.selectedCell, num);
+    }
+
+    if (success) {
+      this.progress.incrementMoves();
+      this.render();
+      this.checkForCompletion();
+    }
+  }
+
+  /**
    * Handle keyboard input
    * @param {KeyboardEvent} e
    */
@@ -182,19 +203,11 @@ export class SudokuUI {
 
     if (e.key >= '1' && e.key <= '9') {
       const num = parseInt(e.key);
-      const success = this.grid.setValue(this.selectedCell, num);
-      if (success) {
-        this.progress.incrementMoves();
-        this.render();
-        this.checkForCompletion();
-      }
+      this.enterNumber(num);
+      e.preventDefault();
     } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-      const success = this.grid.clear(this.selectedCell);
-      if (success) {
-        this.progress.incrementMoves();
-        this.render();
-        this.checkForCompletion();
-      }
+      this.enterNumber(0);
+      e.preventDefault();
     } else if (e.key === 'ArrowUp') {
       this.moveSelection(-9);
     } else if (e.key === 'ArrowDown') {
@@ -371,15 +384,103 @@ export class SudokuUI {
       });
     }
 
-    // Difficulty change
+    // Difficulty select (hidden, but kept for accessibility)
     const difficultySelect = document.getElementById('difficulty-select');
     if (difficultySelect) {
       difficultySelect.addEventListener('change', () => {
-        // If a game is in progress, ask to start a new game with the new difficulty?
-        // For simplicity, we'll just start a new game when difficulty changes.
         this.startNewGame();
       });
     }
+
+    // Difficulty buttons (visible UI)
+    const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+    difficultyBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        // Update aria-pressed state
+        difficultyBtns.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+        btn.setAttribute('aria-pressed', 'true');
+
+        // Sync the hidden select
+        const difficulty = btn.dataset.difficulty;
+        if (difficultySelect) {
+          difficultySelect.value = difficulty;
+        }
+
+        // Start new game with selected difficulty
+        this.startNewGame(difficulty);
+      });
+    });
+
+    // Pause button
+    const pauseBtn = document.getElementById('pause-btn');
+    if (pauseBtn) {
+      pauseBtn.addEventListener('click', () => {
+        if (this.progress.paused) {
+          this.progress.resumeTimer();
+          pauseBtn.setAttribute('aria-pressed', 'false');
+          pauseBtn.querySelector('.btn-text').textContent = 'Pause';
+          pauseBtn.querySelector('.btn-icon').textContent = '⏸️';
+        } else {
+          this.progress.pauseTimer();
+          pauseBtn.setAttribute('aria-pressed', 'true');
+          pauseBtn.querySelector('.btn-text').textContent = 'Resume';
+          pauseBtn.querySelector('.btn-icon').textContent = '▶️';
+        }
+      });
+    }
+
+    // Keypad buttons (touch input)
+    const keypadBtns = document.querySelectorAll('.keypad-btn');
+    keypadBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const value = btn.dataset.value;
+        if (value === 'clear') {
+          this.enterNumber(0);
+        } else {
+          this.enterNumber(parseInt(value, 10));
+        }
+      });
+    });
+
+    // Dialog buttons
+    const hintCloseBtn = document.getElementById('hint-close-btn');
+    if (hintCloseBtn) {
+      hintCloseBtn.addEventListener('click', () => {
+        const dialog = document.getElementById('hint-dialog');
+        if (dialog) dialog.close();
+      });
+    }
+
+    const playAgainBtn = document.getElementById('play-again-btn');
+    if (playAgainBtn) {
+      playAgainBtn.addEventListener('click', () => {
+        const dialog = document.getElementById('game-over-dialog');
+        if (dialog) dialog.close();
+        this.startNewGame();
+      });
+    }
+
+    const newGameDialogBtn = document.getElementById('new-game-btn-dialog');
+    if (newGameDialogBtn) {
+      newGameDialogBtn.addEventListener('click', () => {
+        const dialog = document.getElementById('game-over-dialog');
+        if (dialog) dialog.close();
+        this.startNewGame();
+      });
+    }
+
+    // Cell click events are bound in render() via cell.addEventListener
+    // Keypad visibility when selecting a cell
+    document.addEventListener('click', (e) => {
+      const keypad = document.getElementById('keypad');
+      const target = e.target;
+      if (!keypad) return;
+      if (target.closest('.cell') || target.closest('.keypad')) {
+        keypad.hidden = false;
+      } else {
+        keypad.hidden = true;
+      }
+    });
 
     // Hint buttons
     const highlightBtn = document.getElementById('highlight-conflicts-btn');
