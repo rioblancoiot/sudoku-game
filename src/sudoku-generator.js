@@ -181,9 +181,9 @@ export class SudokuGenerator {
       puzzle[index] = 0;
 
       // Check uniqueness
-      const result = this.solver.verifyUnique(puzzle);
+      const isUnique = this.solver.verifyUnique(puzzle);
 
-      if (!result.unique) {
+      if (!isUnique) {
         // Restore - would lose uniqueness
         puzzle[index] = backup;
       } else {

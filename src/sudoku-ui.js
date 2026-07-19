@@ -60,8 +60,8 @@ export class SudokuUI {
       difficulty = difficultySelect.value;
     }
 
-    // Generate a puzzle
-    const { puzzle, solution } = this.generator.generatePuzzle(difficulty);
+    // Generate a puzzle (generatePuzzle is async)
+    const { puzzle, solution } = await this.generator.generatePuzzle(difficulty);
     this.puzzleId = Date.now().toString(); // simple ID
 
     // Load the puzzle into the grid
