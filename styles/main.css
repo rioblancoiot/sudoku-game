@@ -523,7 +523,7 @@ body {
   bottom: var(--space-md);
   left: 50%;
   transform: translateX(-50%);
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: var(--space-xs);
   padding: var(--space-md);
@@ -533,6 +533,10 @@ body {
   box-shadow: 0 8px 32px var(--color-shadow-strong);
   z-index: var(--z-keypad);
   animation: keypadSlideUp var(--transition-normal);
+}
+
+.keypad[hidden] {
+  display: none;
 }
 
 .keypad.visible {
